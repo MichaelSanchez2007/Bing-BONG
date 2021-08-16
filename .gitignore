@@ -1,3 +1,11 @@
+# This file tells git what files to ignore (they won't be uploaded to github)
+
+# We don't want to upload our secret keys to github
 /.env
+
+# The node_modules folder is huge, and can just be re-generated with "npm install"
 /node_modules
+
+# These contain metadata about the installation, and are also generated with "npm install"
 package-lock.json
+pnpm-lock.yaml

@@ -10,10 +10,10 @@ import {
 } from '@discordjs/voice';
 import { createDiscordJSAdapter } from './adapter.js';
 import { Client, VoiceChannel, Intents } from 'discord.js';
-// import { token } from './config.json'
-// console.log(token);
+import dotenv from 'dotenv'
+dotenv.config();
 
-const token = 'ODc2NTI4NTA1MTUwNjQ0MzA0.YRlYyA.jQAo2lJG89SGBOlc-uJn1MrbtY4'
+const token = process.env.TOKEN
 
 const player = createAudioPlayer();
 
@@ -21,9 +21,9 @@ function playSong() {
 	const resource = createAudioResource('./sounds/Tacobell.mp3', {
 		inputType: StreamType.Arbitrary,
 	});
-	
+
 	player.play(resource);
-	
+
 	return entersState(player, AudioPlayerStatus.Playing, 5e3);
 };
 
@@ -67,16 +67,17 @@ bot.on('ready',async () => {
 
 // Play sound
 bot.on('message', async message => {
-	if (!message.guild) return;
+	if (!message.guild) return; // cancel if not a channel message
+	if (message.author.bot) return; // cancel if the user is a bot
 
-	if (message.content === 'bing') {
+	if (message.content === '-bing' || message.content === '/bing') {
 		message.channel.send('Bong.');
  	}
 
 	// Join command
-	if (message.content === "Pull up to da crib" || "-join") {
+	if (message.content === "/pull up" || message.content === "/join") {
 		const channel = message.member?.voice.channel;
-		
+
 		if (channel) {
 			try {
 				const connection = await connectToChannel(channel);
@@ -89,5 +90,4 @@ bot.on('message', async message => {
 			message.reply('Join a voice channel then try again!');
 		}
     }
-
 });
