@@ -1,159 +1,82 @@
-import { Client, VoiceChannel, Intents } from 'discord.js';
-import {
-	joinVoiceChannel,
-	createAudioPlayer,
-	createAudioResource,
-	entersState,
-	StreamType,
-	AudioPlayerStatus,
-	VoiceConnectionStatus,
-} from '@discordjs/voice';
-import { createDiscordJSAdapter } from './adapter.js';
-import * as dotenv from 'dotenv'
-dotenv.config();
+import 'dotenv/config';
+import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
+import { AudioManager } from 'discord-media-player';
+import { Client, Intents } from 'discord.js';
+import { willow } from './willow.js';
 
-const token = process.env.TOKEN
-
-/*
-	In this example, we are creating a single audio player that plays to a number of
-	voice channels.
-
-	The audio player will play a single track.
-*/
-
-/*
-	Create the audio player. We will use this for all of our connections.
-*/
-const player = createAudioPlayer();
-
-function playSong() {
-	/*
-		Here we are creating an audio resource using a 🔥 airhorn sample Brady found.
-
-		We specify an arbitrary inputType. This means that we aren't too sure what the format of
-		the input is, and that we'd like to have this converted into a format we can use. If we
-		were using an Ogg or WebM source, then we could change this value. However, for now we
-		will leave this as arbitrary.
-	*/
-	const resource = createAudioResource('../sounds/airhorn.mp3', {
-		inputType: StreamType.Arbitrary,
-	});
-
-	/*
-		We will now play this to the audio player. By default, the audio player will not play until
-		at least one voice connection is subscribed to it, so it is fine to attach our resource to the
-		audio player this early.
-	*/
-	player.play(resource);
-
-	/*
-		Here we are using a helper function. It will resolve if the player enters the Playing
-		state within 5 seconds, otherwise it will reject with an error.
-	*/
-	return entersState(player, AudioPlayerStatus.Playing, 5e3);
-}
-
-async function connectToChannel(channel: VoiceChannel) {
-	/*
-		Here, we try to establish a connection to a voice channel. If we're already connected
-		to this voice channel, @discordjs/voice will just return the existing connection for
-		us!
-	*/
-	const connection = joinVoiceChannel({
-		channelId: channel.id,
-		guildId: channel.guild.id,
-		adapterCreator: createDiscordJSAdapter(channel),
-	});
-
-	/*
-		If we're dealing with a connection that isn't yet Ready, we can set a reasonable
-		time limit before giving up. In this example, we give the voice connection 30 seconds
-		to enter the ready state before giving up.
-	*/
-	try {
-		/*
-			Allow ourselves 30 seconds to join the voice channel. If we do not join within then,
-			an error is thrown.
-		*/
-		await entersState(connection, VoiceConnectionStatus.Ready, 30e3);
-		/*
-			At this point, the voice connection is ready within 30 seconds! This means we can
-			start playing audio in the voice channel. We return the connection so it can be
-			used by the caller.
-		*/
-		return connection;
-	} catch (error) {
-		/*
-			At this point, the voice connection has not entered the Ready state. We should make
-			sure to destroy it, and propagate the error by throwing it, so that the calling function
-			is aware that we failed to connect to the channel.
-		*/
-		connection.destroy();
-		throw error;
-	}
-}
-
-/*
-	Main code
-	=========
-	Here we will implement the helper functions that we have defined above
-*/
+import type { VoiceConnection } from '@discordjs/voice';
+import type { Message, VoiceChannel } from 'discord.js';
 
 const client = new Client({
 	intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES],
 });
 
-void client.login(token);
+const audioManager = new AudioManager({}); 
 
 client.on('ready', async () => {
-	console.log('Discord.js client is ready!');
-
-	/*
-		Try to get our song ready to play for when the bot joins a voice channel
-	*/
-	try {
-		await playSong();
-		console.log('Song is ready to play!');
-	} catch (error) {
-		/*
-			The song isn't ready to play for some reason :(
-		*/
-		console.error(error);
-	}
+	willow()
+	console.log('Discord.js client is ready!')
 });
+
+async function playSound(message: Message, voiceChannel: VoiceChannel) {
+	const connection = joinVoiceChannel({
+		channelId: voiceChannel.id,
+		guildId: message.guild.id,
+		adapterCreator: message.guild.voiceAdapterCreator
+	});
+
+	const player = audioManager.getPlayer(connection);
+
+	if (player.playing) player.stop();
+	
+	await player.play('https://www.youtube.com/watch?v=dQw4w9WgXcQ' || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 0);
+
+	return player;
+};
+
+let interval;
+
+const hour = () => new Date().getHours() % 12;
+
+const popOff = async (message: Message, voiceChannel: VoiceChannel) => {
+	let remaining = hour();	
+
+	const player = await playSound(message, voiceChannel);
+	player.loop();
+
+	function stop() {
+		player.stop();
+		getVoiceConnection(message.guildId).disconnect();
+	}
+
+	setTimeout(stop, 4500 * remaining)
+}
 
 client.on('messageCreate', async (message) => {
 	if (!message.guild) return;
+	if (message.author.bot) return;
+
+	const channel = message.member?.voice.channel;
+	if (!channel) return void message.reply('bruh... u not even in a voice channel smh');
+
+	if (message.content === '-setup') {
+		if (interval) return void message.reply('chill we already poppin off');
+
+		interval = setInterval(popOff.bind(null, message, channel), 60000);
+
+		message.reply('poppin off in `n` amount of minutes where `n` is `60`\nIf the poppin off is urgent please use `-join`');
+	}
 
 	if (message.content === '-join') {
-		const c = message.member?.voice.channel;
-		const channel = <VoiceChannel> c; // TypeScript is dumb
-
-		if (channel) {
-			/*
-				The user is in a voice channel, try to connect
-			*/
-			try {
-				const connection = await connectToChannel(channel);
-
-				/*
-					We have successfully connected! Now we can subscribe our connection to
-					the player. This means that the player will play audio in the user's
-					voice channel.
-				*/
-				connection.subscribe(player);
-				await message.reply('Finna pop offff');
-			} catch (error) {
-				/*
-					Unable to connect to the voice channel within 30 seconds :(
-				*/
-				console.error(error);
-			}
-		} else {
-			/*
-				The user is not in a voice channel
-			*/
-			void message.reply('bruh... u not even in a voice channel smh');
+		try {
+			popOff(message, channel as VoiceChannel);
+			message.reply('Finna pop offff');
+		} catch (error) {
+			console.error(error);
 		}
 	}
+
 });
+
+client.login(process.env.TOKEN);
+
