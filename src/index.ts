@@ -34,8 +34,6 @@ async function playSound(message: Message, voiceChannel: VoiceChannel) {
 	return player;
 };
 
-let interval;
-
 const hour = () => new Date().getHours() % 12;
 
 const popOff = async (message: Message, voiceChannel: VoiceChannel) => {
@@ -51,6 +49,8 @@ const popOff = async (message: Message, voiceChannel: VoiceChannel) => {
 
 	setTimeout(stop, 4500 * remaining)
 }
+
+let interval;
 
 client.on('messageCreate', async (message) => {
 	if (!message.guild) return;
