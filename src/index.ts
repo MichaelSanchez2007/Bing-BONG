@@ -2,8 +2,6 @@ import 'dotenv/config';
 import { joinVoiceChannel, getVoiceConnection } from '@discordjs/voice';
 import { AudioManager } from 'discord-media-player';
 import { Client, Intents } from 'discord.js';
-import { willow } from './willow.js';
-
 import type { VoiceConnection } from '@discordjs/voice';
 import type { Message, VoiceChannel } from 'discord.js';
 
@@ -14,7 +12,7 @@ const client = new Client({
 const audioManager = new AudioManager({}); 
 
 client.on('ready', async () => {
-	willow()
+
 	console.log('Discord.js client is ready!')
 });
 
