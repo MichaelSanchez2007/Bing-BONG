@@ -64,10 +64,10 @@ client.on('messageCreate', async (message) => {
 
 		interval = setInterval(popOff.bind(null, message, channel), 60000);
 
-		message.reply('poppin off in `n` amount of minutes where `n` is `60`\nIf the poppin off is urgent please use `-join`');
+		message.reply('poppin off in `n` amount of minutes where `n` is `60`\nIf the poppin off is urgent please use `-popoff`');
 	}
 
-	if (message.content === '-join') {
+	if (['-join', '-popoff', '-pop off'].includes(message.content)) {
 		try {
 			popOff(message, channel as VoiceChannel);
 			message.reply('Finna pop offff');
