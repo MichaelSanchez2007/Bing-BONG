@@ -29,7 +29,7 @@ async function playSound(message: Message, voiceChannel: VoiceChannel) {
 
 	if (player.playing) player.stop();
 	
-	await player.play('https://www.youtube.com/watch?v=dQw4w9WgXcQ' || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 0);
+	await player.play('https://www.youtube.com/watch?v=UaUa_0qPPgc', 0);
 
 	return player;
 };
@@ -79,4 +79,3 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.TOKEN);
-
